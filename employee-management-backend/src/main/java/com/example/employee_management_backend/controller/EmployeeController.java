@@ -14,6 +14,7 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:3000") // Allow requests from our React app
 @RestController
 @RequestMapping("/api/v1/employees")
+//@CrossOrigin()
 public class EmployeeController {
 
 
