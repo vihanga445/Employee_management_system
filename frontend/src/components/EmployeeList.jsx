@@ -1,24 +1,77 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState,useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const EmployeeList = () => {
   const [employees, setEmployees] = useState([]);
+  const navigate = useNavigate();
 
-  const fetchEmployees = async () => {
-    const res = await axios.get("http://localhost:8080/api/v1/employees");
-    setEmployees(res.data);
-  };
+  // const fetchEmployees = async () => {
+  //   const res = await axios.get("http://localhost:8080/api/v1/employees");
+  //   setEmployees(res.data);
+  // };
 
+  // useEffect(() => {
+  //   fetchEmployees();
+  // }, []);
+
+  // const handleDelete = async (id) => {
+  // if (window.confirm("Are you sure you want to delete this employee?")) {
+  //     await axios.delete(`http://localhost:8080/api/v1/employees/${id}`);
+  //     alert("Employee deleted successfully");
+  //     fetchEmployees();
+  //   }
+  // };
+
+  const fetchEmployees = useCallback(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login"); // Redirect if no token
+      return;
+    }
+
+    axios
+      .get("http://localhost:8080/api/v1/employees", {
+        headers: { Authorization: `Bearer ${token}` }, // Send auth token
+      })
+      .then((res) => {
+        setEmployees(res.data);
+      })
+      .catch((error) => {
+        // If request fails (e.g., token expired), redirect to login
+        console.error("Error fetching employees:", error);
+        navigate("/login");
+      });
+  }, [navigate]); // Dependency on navigate
+
+  // 2. useEffect now calls the new fetchEmployees function
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [fetchEmployees]); // Dependency on the memoized function
 
+  // 3. handleDelete must ALSO send the token and handle auth errors
   const handleDelete = async (id) => {
-  if (window.confirm("Are you sure you want to delete this employee?")) {
-      await axios.delete(`http://localhost:8080/api/v1/employees/${id}`);
-      alert("Employee deleted successfully");
-      fetchEmployees();
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login"); // Redirect if no token
+      return;
+    }
+
+    if (window.confirm("Are you sure you want to delete this employee?")) {
+      try {
+        await axios.delete(`http://localhost:8080/api/v1/employees/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }, // Send auth token
+        });
+        alert("Employee deleted successfully");
+        fetchEmployees(); // Refetch the list
+      } catch (error) {
+        console.error("Error deleting employee:", error);
+        alert("Failed to delete employee.");
+        // Also redirect if delete fails due to authorization
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          navigate("/login");
+        }
+      }
     }
   };
 
